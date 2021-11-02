@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle</title>
+</head>
+
+<style>
+    html {
+        height: 100vh;
+        background-color: rgb(197, 197, 197);
+    }
+
+    body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 80vh;
+    }
+
+    .grid {
+        border: 1px solid blue;
+        display: flex;
+        flex-wrap: wrap;
+        position: relative;
+        /* background-image: url(https://picsum.photos/500/500); */
+        height: 500px;
+        width: 500px;
+        background-position-x: 0;
+        background-position-y: 0;
+    }
+
+    .cell {
+        position: absolute;
+    }
+
+    .cell:hover {
+        filter: saturate(50%) brightness(10%);
+    }
+</style>
+
+<body>
+
+    <div class="grid">
+    </div>
+
+    <img src="https://picsum.photos/500/500" alt="">
+
+    <script src="/Game.js"></script>
+    <script src="./app.js"></script>
+
+</body>
+
+</html>
