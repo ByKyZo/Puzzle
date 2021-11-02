@@ -26,7 +26,7 @@ class Game {
 
     __INIT__() {
         this.drawImg(this.root);
-        this.init();
+        this.cellsListeners();
     }
 
     drawImg = () => {
@@ -41,6 +41,7 @@ class Game {
 
         for (let i = 0; i < this.params.row; i++) {
             this.grid.answer[i] = [];
+            this.grid.current[i] = [];
             this.grid.html[i] = [];
 
             for (let j = 0; j < this.params.col; j++) {
@@ -51,6 +52,9 @@ class Game {
                 cell.style.height = `${this.params.getImgHeight()}px`;
                 cell.style.left = `${this.params.getImgWidth() * j}px`;
                 cell.style.top = `${this.params.getImgHeight() * i}px`;
+                // cell.style.transform = `translate(${this.params.getImgWidth() * j}px,${
+                //     this.params.getImgWidth() * i
+                // }px)`;
                 cell.dataset.col = j;
                 cell.dataset.row = i;
 
@@ -62,9 +66,11 @@ class Game {
                     ID++;
                     cell.dataset.id = ID;
                     this.grid.answer[i][j] = ID;
+                    this.grid.current[i][j] = ID;
                 } else {
                     cell.dataset.id = this.EMPTY_ID;
                     this.grid.answer[i][j] = this.EMPTY_ID;
+                    this.grid.current[i][j] = this.EMPTY_ID;
                 }
 
                 this.grid.html[i][j] = cell;
@@ -77,35 +83,47 @@ class Game {
 
     isValidPosition = (row, col, emptyRow, emptyCol) => {
         return (
-            (row + 1 === emptyRow + 1 && col === emptyCol) ||
-            (row - 1 === emptyRow - 1 && col === emptyCol) ||
-            (row === emptyRow && col + 1 === emptyCol + 1) ||
-            (row === emptyRow && col - 1 === emptyCol - 1)
+            (row === emptyRow + 1 && col === emptyCol) ||
+            (row === emptyRow - 1 && col === emptyCol) ||
+            (row === emptyRow && col === emptyCol + 1) ||
+            (row === emptyRow && col === emptyCol - 1)
         );
     };
 
-    init = () => {
+    cellsListeners = () => {
         this.grid.html.forEach((rowEl) => {
             rowEl.forEach((el) => {
                 el.addEventListener('click', () => {
-                    const row = el.dataset.row;
-                    const col = el.dataset.col;
-                    const cellID = el.dataset.id;
+                    const row = +el.dataset.row;
+                    const col = +el.dataset.col;
+                    const cellID = +el.dataset.id;
 
                     const emptyCell = document.querySelector(`[data-id="${this.EMPTY_ID}"]`);
-                    const emptyCellRow = emptyCell.dataset.row;
-                    const emptyCellCol = emptyCell.dataset.col;
-                    console.log(emptyCell);
-                    console.log(emptyCellRow);
-                    console.log(emptyCellCol);
+                    const emptyCellRow = +emptyCell.dataset.row;
+                    const emptyCellCol = +emptyCell.dataset.col;
+
                     if (this.isValidPosition(row, col, emptyCellRow, emptyCellCol)) {
                         console.log('VALID');
-                    }
 
-                    // console.log('ROW = ', row);
-                    // console.log('COL = ', col);
-                    // console.log('ID = ', cellID);
-                    // console.log('emptyEl = ', emptyCell);
+                        const oldLeftPos = el.style.left;
+                        const oldTopPos = el.style.top;
+
+                        el.style.left = emptyCell.style.left;
+                        el.style.top = emptyCell.style.top;
+
+                        emptyCell.style.left = oldLeftPos;
+                        emptyCell.style.top = oldTopPos;
+
+                        this.grid.current[row][col] = this.EMPTY_ID;
+                        this.grid.current[emptyCellRow][emptyCellCol] = cellID;
+
+                        el.dataset.row = emptyCellRow;
+                        el.dataset.col = emptyCellCol;
+                        emptyCell.dataset.row = row;
+                        emptyCell.dataset.col = col;
+
+                        console.log(this.grid.current);
+                    }
                 });
             });
         });

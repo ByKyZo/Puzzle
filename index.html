@@ -22,7 +22,7 @@
     }
 
     .grid {
-        border: 1px solid blue;
+        /* border: 1px solid blue; */
         display: flex;
         flex-wrap: wrap;
         position: relative;
@@ -35,11 +35,14 @@
 
     .cell {
         position: absolute;
+        border: 1px inset red;
+        box-sizing: border-box;
     }
 
-    .cell:hover {
+    /* .cell:hover {
         filter: saturate(50%) brightness(10%);
     }
+    */
 </style>
 
 <body>
