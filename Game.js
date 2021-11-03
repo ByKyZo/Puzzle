@@ -123,6 +123,7 @@ class Game {
 
         const emptyCell = this.getEmptyCellElement();
         const cell = this.getCellElement(row, col);
+        console.log(cell);
 
         const oldLeftPos = cell.style.left;
         const oldTopPos = cell.style.top;
@@ -140,18 +141,25 @@ class Game {
         this.updateEmptyCell(row, col);
     }
 
-    shuffle() {
+    async shuffle() {
         const [emptyCellRow, emptyCellCol] = this.getEmptyCellPos();
 
         let oldDirection = null;
 
+        const wait = () => {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve();
+                }, 100);
+            });
+        };
+
         let count = 0;
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 100; i++) {
             const randomDirection = Math.random();
             const [emptyCellRow, emptyCellCol] = this.getEmptyCellPos();
 
             count++;
-
             const isOldDirection = (direction) => {
                 return direction === oldDirection;
             };
@@ -159,7 +167,9 @@ class Game {
             switch (true) {
                 case randomDirection < 0.25:
                     if (isOldDirection('left') || !(emptyCellCol - 1 >= 0)) {
+                        console.log('BEFORE ', i);
                         i--;
+                        console.log('AFTER ', i);
                         break;
                     } else {
                         console.log('left');
@@ -199,7 +209,8 @@ class Game {
                     }
                     break;
             }
-            // console.log('shuffle');
+
+            await wait();
         }
         console.log(count);
         console.log('emptyCellRow ', emptyCellRow);
