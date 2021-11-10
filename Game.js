@@ -1,7 +1,35 @@
 class Game {
     EMPTY_ID = -1;
+    isWin = false;
+    isStarted = false;
+    isInShuffle = false;
+    round = 0;
+    roundProxy = new Proxy({ round: this.round }, () => {
+        console.log('round change');
+    });
     root;
+    roundState = {
+        value: 0,
+        listener: function (callback) {
+            callback && callback(this.value);
+        },
+        set: function (setCallback, callback) {
+            this.value = setCallback(this.value);
+            this.listener(callback);
+        },
+    };
+
+    incRound() {
+        this.roundState.set((value) => (value += 1), this.roundListenerCallback);
+    }
+
+    onRound(callback) {
+        this.roundListenerCallback = callback;
+    }
+
     params = {
+        shuffleRound: 100,
+        timeout: 50,
         row: 3,
         col: 3,
         imgRootWidth: 500,
@@ -32,9 +60,11 @@ class Game {
     __INIT__() {
         this.drawImg(this.root);
         this.cellsListeners();
-        setTimeout(() => {
-            this.shuffle();
-        }, 1000);
+    }
+
+    play() {
+        this.shuffle();
+        this.isStarted = true;
     }
 
     drawImg = () => {
@@ -60,6 +90,7 @@ class Game {
                 cell.style.height = `${this.params.getImgHeight()}px`;
                 cell.style.left = `${this.params.getImgWidth() * j}px`;
                 cell.style.top = `${this.params.getImgHeight() * i}px`;
+                cell.style.transition = `${this.params.timeout}ms`;
                 // cell.style.transform = `translate(${this.params.getImgWidth() * j}px,${
                 //     this.params.getImgWidth() * i
                 // }px)`;
@@ -77,6 +108,7 @@ class Game {
                     this.grid.current[i][j] = ID;
                 } else {
                     cell.dataset.id = this.EMPTY_ID;
+                    cell.classList.add('__empty-cell');
                     this.grid.answer[i][j] = this.EMPTY_ID;
                     this.grid.current[i][j] = this.EMPTY_ID;
                     this.updateEmptyCell(i, j);
@@ -123,7 +155,6 @@ class Game {
 
         const emptyCell = this.getEmptyCellElement();
         const cell = this.getCellElement(row, col);
-        console.log(cell);
 
         const oldLeftPos = cell.style.left;
         const oldTopPos = cell.style.top;
@@ -134,15 +165,26 @@ class Game {
         emptyCell.style.left = oldLeftPos;
         emptyCell.style.top = oldTopPos;
 
-        this.grid.current[row][col] = this.EMPTY_ID;
-        this.grid.current[emptyCellRow][emptyCellCol] = cell.dataset.id;
+        this.grid.current[row][col] = +this.EMPTY_ID;
+        this.grid.current[emptyCellRow][emptyCellCol] = +cell.dataset.id;
 
         this.updateCellElement(row, col, emptyCellRow, emptyCellCol);
         this.updateEmptyCell(row, col);
     }
 
+    checkWin() {
+        const answerFlat = this.grid.answer.flat();
+        const currentFlat = this.grid.current.flat();
+        if (answerFlat.every((e, i) => e === currentFlat[i])) {
+            this.isWin = true;
+            console.log('----W-I-N----');
+        }
+    }
+
     async shuffle() {
-        const [emptyCellRow, emptyCellCol] = this.getEmptyCellPos();
+        if (this.isInShuffle) return;
+
+        this.isInShuffle = true;
 
         let oldDirection = null;
 
@@ -150,71 +192,40 @@ class Game {
             return new Promise((resolve) => {
                 setTimeout(() => {
                     resolve();
-                }, 100);
+                }, this.params.timeout);
             });
         };
 
-        let count = 0;
-        for (let i = 0; i < 100; i++) {
-            const randomDirection = Math.random();
+        const memo = [];
+
+        for (let i = 0; i < this.params.shuffleRound; i++) {
             const [emptyCellRow, emptyCellCol] = this.getEmptyCellPos();
 
-            count++;
-            const isOldDirection = (direction) => {
-                return direction === oldDirection;
-            };
+            let possibleDir = [];
 
-            switch (true) {
-                case randomDirection < 0.25:
-                    if (isOldDirection('left') || !(emptyCellCol - 1 >= 0)) {
-                        console.log('BEFORE ', i);
-                        i--;
-                        console.log('AFTER ', i);
-                        break;
-                    } else {
-                        console.log('left');
-                        this.updateCell(emptyCellRow, emptyCellCol - 1);
-                        oldDirection = 'left';
-                    }
-                    break;
-                case randomDirection < 0.5:
-                    if (isOldDirection('top') || !(emptyCellRow - 1 >= 0)) {
-                        i--;
-                        break;
-                    } else if (emptyCellRow - 1 >= 0) {
-                        console.log('top');
-                        this.updateCell(emptyCellRow - 1, emptyCellCol);
-                        oldDirection = 'top';
-                    }
-                    break;
-                case randomDirection < 0.75:
-                    if (isOldDirection('right') || !(emptyCellCol + 1 > this.params.col)) {
-                        i--;
-                        break;
-                    } else {
-                        console.log('right');
-                        this.updateCell(emptyCellRow, emptyCellCol + 1);
-                        oldDirection = 'right';
-                    }
-                    break;
-                case randomDirection < 1:
-                    // isOldDirection('left');
-                    if (isOldDirection('bottom') || !(emptyCellRow + 1 < this.params.row)) {
-                        i--;
-                        break;
-                    } else {
-                        console.log('bottom');
-                        this.updateCell(emptyCellRow + 1, emptyCellCol);
-                        oldDirection = 'bottom';
-                    }
-                    break;
-            }
+            emptyCellCol - 1 >= 0 && possibleDir.push('left');
+            emptyCellRow - 1 >= 0 && possibleDir.push('top');
+            emptyCellCol + 1 < this.params.col && possibleDir.push('right');
+            emptyCellRow + 1 < this.params.row && possibleDir.push('bottom');
+
+            possibleDir = possibleDir.filter((v) => v !== oldDirection);
+
+            const randomDirection = possibleDir[this.randomInt(0, possibleDir.length - 1)];
+            // this.updateCell(emptyCellRow + 1, emptyCellCol), (oldDirection = 'bottom');
+
+            if (randomDirection === 'left')
+                this.updateCell(emptyCellRow, emptyCellCol - 1), (oldDirection = 'right');
+            else if (randomDirection === 'top')
+                this.updateCell(emptyCellRow - 1, emptyCellCol), (oldDirection = 'bottom');
+            else if (randomDirection === 'right')
+                this.updateCell(emptyCellRow, emptyCellCol + 1), (oldDirection = 'left');
+            else if (randomDirection === 'bottom')
+                this.updateCell(emptyCellRow + 1, emptyCellCol), (oldDirection = 'top');
 
             await wait();
         }
-        console.log(count);
-        console.log('emptyCellRow ', emptyCellRow);
-        console.log('emptyCellCol ', emptyCellCol);
+        this.isInShuffle = false;
+        console.log(this.grid);
     }
 
     isValidPosition = (row, col, emptyRow, emptyCol) => {
@@ -235,9 +246,15 @@ class Game {
 
                     const [emptyCellRow, emptyCellCol] = this.getEmptyCellPos();
 
-                    if (this.isValidPosition(row, col, emptyCellRow, emptyCellCol)) {
+                    if (
+                        this.isStarted &&
+                        !this.isWin &&
+                        this.isValidPosition(row, col, emptyCellRow, emptyCellCol)
+                    ) {
                         console.log('VALID');
                         this.updateCell(row, col);
+                        this.checkWin();
+                        this.incRound();
                     }
                 });
             });
@@ -248,3 +265,21 @@ class Game {
         return Math.floor(Math.random() * (max - min + 1) + min);
     }
 }
+
+// if (randomDirection === 'left') {
+//     memo.push(`${emptyCellRow} ${emptyCellCol - 1}`);
+//     this.updateCell(emptyCellRow, emptyCellCol - 1);
+//     oldDirection = 'left';
+// } else if (randomDirection === 'top') {
+//     memo.push(`${emptyCellRow - 1} ${emptyCellCol}`);
+//     this.updateCell(emptyCellRow - 1, emptyCellCol);
+//     oldDirection = 'top';
+// } else if (randomDirection === 'right') {
+//     memo.push(`${emptyCellRow} ${emptyCellCol + 1}`);
+//     this.updateCell(emptyCellRow, emptyCellCol + 1);
+//     oldDirection = 'right';
+// } else if (randomDirection === 'bottom') {
+//     memo.push(`${emptyCellRow + 1} ${emptyCellCol}`);
+//     this.updateCell(emptyCellRow + 1, emptyCellCol);
+//     oldDirection = 'bottom';
+// }
